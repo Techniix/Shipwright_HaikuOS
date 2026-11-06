@@ -6,7 +6,11 @@
 #endif
 #include "Extract.h"
 #include "TorchExtract.h"
+#ifdef __HAIKU__
+#include "soh/platform/haiku/HaikuFilePanel.h"
+#else
 #include "portable-file-dialogs.h"
+#endif
 #include "spdlog/spdlog.h"
 #include <ship/utils/binarytools/BitConverter.h>
 #include "soh/ShipUtils.h"
@@ -317,6 +321,14 @@ bool Extractor::GetRomPathFromBox() {
         return false;
     }
     mCurrentRomPath = nameBuffer;
+#elif defined(__HAIKU__)
+    // pfd shells out to zenity/kdialog, which Haiku doesn't have; use a Tracker file panel.
+    std::string selection;
+    if (!SohHaiku::OpenRomFilePanel(mSearchPath, selection)) {
+        return false;
+    }
+
+    mCurrentRomPath = selection;
 #else
     if (!pfd::settings::available()) {
         std::string msg =

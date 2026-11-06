@@ -1,0 +1,22 @@
+/* SPDX-License-Identifier: MIT */
+/*
+ * Haiku resources for Ship of Harkinian.
+ * Compiled with rc and attached with xres by soh/CMakeLists.txt.
+ */
+
+resource app_signature "application/x-vnd.HarbourMasters-ShipOfHarkinian";
+
+resource app_flags B_MULTIPLE_LAUNCH;
+
+resource app_version {
+	major  = @CMAKE_PROJECT_VERSION_MAJOR@,
+	middle = @CMAKE_PROJECT_VERSION_MINOR@,
+	minor  = @CMAKE_PROJECT_VERSION_PATCH@,
+
+	variety = B_APPV_FINAL,
+	internal = 0,
+
+	short_info = "Ship of Harkinian",
+	long_info = "Ship of Harkinian @CMAKE_PROJECT_VERSION@ (@PROJECT_BUILD_NAME@), a PC port of Ocarina of Time. Haiku build."
+};
+

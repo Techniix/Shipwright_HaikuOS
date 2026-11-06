@@ -159,6 +159,11 @@ else()
     list(FILTER soh__ EXCLUDE REGEX "soh/Enhancements/speechsynthesizer/(Darwin|SAPI)")
 endif()
 
+# Haiku-only native helpers (Tracker file panel)
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    list(FILTER soh__ EXCLUDE REGEX "soh/platform/haiku/")
+endif()
+
 find_library(ESPEAK espeak-ng)
 if (NOT ESPEAK)
     list(FILTER soh__ EXCLUDE REGEX "soh/Enhancements/speechsynthesizer/ESpeak")
@@ -712,6 +717,10 @@ else()
     if(MATH_LIBRARY)
         list(APPEND ADDITIONAL_LIBRARY_DEPENDENCIES ${MATH_LIBRARY})
     endif()
+    if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+        # be + tracker: BFilePanel ROM picker. network: sockets live in libnetwork, not libc.
+        list(APPEND ADDITIONAL_LIBRARY_DEPENDENCIES be tracker network)
+    endif()
 endif()
 
 find_package(libzip REQUIRED)
@@ -772,6 +781,34 @@ if(CMAKE_SYSTEM_NAME MATCHES "NintendoSwitch|CafeOS")
     target_link_libraries(${PROJECT_NAME} PRIVATE "${ADDITIONAL_LIBRARY_DEPENDENCIES}" $<TARGET_OBJECTS:pathconf> )
 else()
     target_link_libraries(${PROJECT_NAME} PRIVATE "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    # App signature and version so Tracker, Deskbar and SDL treat soh as a real Haiku app.
+    find_program(HAIKU_RC rc)
+    find_program(HAIKU_XRES xres)
+    find_program(HAIKU_MIMESET mimeset)
+    if(HAIKU_RC AND HAIKU_XRES)
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/haiku/soh.rdef.in ${CMAKE_CURRENT_BINARY_DIR}/haiku/soh.rdef @ONLY)
+        add_custom_command(
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/haiku/soh.rsrc
+            COMMAND ${HAIKU_RC} -o ${CMAKE_CURRENT_BINARY_DIR}/haiku/soh.rsrc ${CMAKE_CURRENT_BINARY_DIR}/haiku/soh.rdef
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/haiku/soh.rdef
+            COMMENT "Compiling Haiku resources..."
+            VERBATIM
+        )
+        add_custom_target(soh-haiku-resources DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/haiku/soh.rsrc)
+        add_dependencies(${PROJECT_NAME} soh-haiku-resources)
+        add_custom_command(
+            TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${HAIKU_XRES} -o $<TARGET_FILE:soh> ${CMAKE_CURRENT_BINARY_DIR}/haiku/soh.rsrc
+            COMMAND $<IF:$<BOOL:${HAIKU_MIMESET}>,${HAIKU_MIMESET},true> -f $<TARGET_FILE:soh>
+            COMMENT "Attaching Haiku resources to soh..."
+            VERBATIM
+        )
+    else()
+        message(WARNING "rc/xres not found: soh will build without Haiku app resources")
+    endif()
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "NintendoSwitch")
