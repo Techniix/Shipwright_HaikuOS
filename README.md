@@ -1,101 +1,122 @@
-> [!NOTE]
-> **Shipwright_HaikuOS** is an unofficial fork that adds [Haiku](https://www.haiku-os.org/) support to Ship of Harkinian.
-> It is not affiliated with HarbourMasters or Nintendo. See [docs/HAIKU.md](docs/HAIKU.md) to build and run it on Haiku,
-> and [NOTICE.md](NOTICE.md) for licensing. Please report Haiku-specific problems here, not upstream.
+# Ship of Harkinian for Haiku
 
-![Ship of Harkinian](docs/shiptitle.darkmode.png#gh-dark-mode-only)
-![Ship of Harkinian](docs/shiptitle.lightmode.png#gh-light-mode-only)
+An unofficial port of [Ship of Harkinian](https://github.com/HarbourMasters/Shipwright), the PC port of
+*The Legend of Zelda: Ocarina of Time*, to [Haiku](https://www.haiku-os.org/).
 
-* [Website](https://www.shipofharkinian.com)
-* [Discord](https://discord.com/invite/harbourmasters)
+![Ship of Harkinian running on Haiku](docs/haiku-screenshot.jpg)
 
-If you're having any trouble after reading through this `README`, feel free to ask for help in the Support text channels. Please keep in mind that we do not condone piracy.
+> [!IMPORTANT]
+> This fork is not affiliated with HarbourMasters or Nintendo. Report Haiku-specific problems in this repository's
+> [Issues](https://github.com/Techniix/Shipwright_HaikuOS/issues), not to the upstream project. Licensing details are
+> in [NOTICE.md](NOTICE.md).
 
-# Quick Start
+## Status
 
-The Ship does not include any copyrighted assets.  You are required to provide a supported copy of the game.
+Ship of Harkinian builds and runs natively on Haiku x86_64: OpenGL rendering through Haiku's GL stack, SDL2 audio and
+input, and a native Tracker file panel for picking your ROM.
 
-### 1. Verify your ROM dump
-You can verify you have dumped a supported copy of the game by using the compatibility checker at https://ship.equipment/. If you'd prefer to manually validate your ROM dump, you can cross-reference its `sha1` hash with the hashes [here](docs/supportedHashes.json).
+Ship of Harkinian has no published license, so this fork does not distribute prebuilt packages. You build it yourself
+from source (one script, below).
 
-### 2. Download The Ship of Harkinian from [Releases](https://github.com/HarbourMasters/Shipwright/releases)
+## What you need
 
-### 3. Launch the Game!
-#### Windows
-* Extract the zip
-* Launch `soh.exe`
+- Haiku R1/beta5 or a recent nightly, **x86_64**
+- About 4 GB of free disk space and an internet connection for the first build
+- A **legally obtained** Ocarina of Time ROM. The port contains no game assets; they are extracted from your ROM on your
+  machine. Check that your ROM is supported at [ship.equipment](https://ship.equipment/), or compare its SHA-1 with
+  [docs/supportedHashes.json](docs/supportedHashes.json).
 
-#### Linux
-* Execute `soh.appimage`.  You may have to `chmod +x` the appimage via terminal.
-* When prompted, select your supported copy of the game.
-* Saves, settings and `oot.o2r` are stored in `~/.local/share/soh/`. If the folder you launch from already has `shipofharkinian.json`, `oot.o2r` or `oot-mq.o2r`, that folder is used instead. Set `SHIP_HOME` to choose another folder.
+## Build
 
-#### macOS
-* Run `soh.app`. When prompted, select your supported copy of the game.
-* You should see a notification saying `Processing OTR`, then, once the process is complete, you should get a notification saying `OTR Successfully Generated`, then the game should start.
+In Terminal:
 
-### 4. Play!
+```sh
+git clone --recursive https://github.com/Techniix/Shipwright_HaikuOS.git
+cd Shipwright_HaikuOS
+scripts/haiku/build.sh --deps
+```
 
-Congratulations, you are now sailing with the Ship of Harkinian! Have fun!
+`--deps` installs the build dependencies with `pkgman` the first time; leave it off for later builds. The build takes a
+while (an hour or more in a VM). To update later:
 
-# Configuration
+```sh
+git pull
+scripts/haiku/build.sh
+```
 
-### Default keyboard configuration
+If the build fails, save the output and open an issue with it:
+
+```sh
+scripts/haiku/build.sh 2>&1 | tee ~/soh-build.log
+```
+
+More detail, including building by hand, is in [docs/HAIKU.md](docs/HAIKU.md).
+
+## Play
+
+1. Start `build-haiku/soh/soh` from Terminal, or double-click `soh` in Tracker.
+2. On first launch, pick your ROM in the file panel (or put the `.z64`/`.n64`/`.v64` file next to `soh` beforehand).
+   The game builds `oot.o2r` from it, which takes a few minutes, then starts.
+
+Saves, settings, mods and the generated `.o2r` files live in the same folder as `soh`. Set `SHIP_HOME` to keep them
+elsewhere.
+
+### Performance
+
+Rendering goes through Haiku's OpenGL, so speed depends on your driver:
+
+- With the default software renderer, everything runs on the CPU. Lower **Internal Resolution** and leave MSAA off in
+  the Settings menu if it's slow.
+- With hardware-accelerated drivers (for example the experimental NVK + Zink stack for NVIDIA), the game uses them
+  automatically.
+
+## Controls
+
 | N64 | A | B | Z | Start | Analog stick | C buttons | D-Pad |
 | - | - | - | - | - | - | - | - |
 | Keyboard | X | C | Z | Space | WASD | Arrow keys | TFGH |
 
-### Other shortcuts
 | Keys | Action |
 | - | - |
-| ESC | Toggle menu |
-| F2 | Toggle capture mouse input |
-| F5 | Save state |
-| F6 | Change state |
-| F7 | Load state |
-| F9 | Toggle Text-to-Speech |
+| Esc | Toggle menu |
+| F2 | Toggle mouse capture |
+| F5 / F6 / F7 | Save state / change slot / load state |
 | F11 | Fullscreen |
-| Tab | Toggle Alternate assets |
+| Tab | Toggle alternate assets |
 | Ctrl+R | Reset |
 
-# Project Overview
-Ship of Harkinian (SOH) is built atop a custom library dubbed libultraship (LUS). Back in the N64 days, there was an SDK distributed to developers named libultra; LUS is designed to mimic the functionality of libultra on modern hardware. In addition, we are dependent on the source code provided by the OOT decompilation project.
+Controllers work through SDL's Haiku joystick support and can be remapped in the menu.
 
-In order for the game to function, you will require a **legally acquired** ROM for Ocarina of Time. Click [here](https://ship.equipment/) to check the compatibility of your specific rom. Any copyrighted assets are extracted from the ROM and reformatted as a .o2r archive file which the code uses.
+## Haiku-specific notes
 
-### Graphics Backends
-Currently, there are three rendering APIs supported: DirectX11 (Windows), OpenGL (all platforms), and Metal (MacOS). You can change which API to use in the `Settings` menu of the menubar, which requires a restart.  If you're having an issue with crashing, you can change the API in the `shipofharkinian.json` file by finding the line `gfxbackend:""` and changing the value to `sdl` for OpenGL. DirectX 11 is the default on Windows.
+- Menus always draw inside the game window. Pop-out menu windows are off by default on Haiku; set
+  `SHIP_HAIKU_VIEWPORTS=1` to try them.
+- Text to speech (F9) is only available if `espeak-ng` was installed when you built.
+- Crashes open Haiku's debugger rather than Ship of Harkinian's crash report.
 
-# Custom Assets
+## Mods and custom assets
 
-Custom assets are packed in `.otr` archive files. To use custom assets, place them in the `mods` folder.
+Put `.o2r`/`.otr` mod archives in the `mods` folder next to `soh`. See [docs/MODDING.md](docs/MODDING.md) and
+[docs/CUSTOM_MUSIC.md](docs/CUSTOM_MUSIC.md). Tools for making assets:
+[retro](https://github.com/HarbourMasters64/retro) and [fast64](https://github.com/HarbourMasters/fast64).
 
-If you're interested in creating and/or packing your own custom asset `.otr` files, check out the following tools:
-* [**retro - OTR generator**](https://github.com/HarbourMasters64/retro)
-* [**fast64 - Blender plugin**](https://github.com/HarbourMasters/fast64)
+## How the port works
 
-# Development
-### Building
+Ship of Harkinian runs on [libultraship](https://github.com/Kenix3/libultraship), which stands in for the N64's
+libultra SDK, and on the code from the [OoT decompilation](https://github.com/zeldaret/oot). The Haiku support is:
 
-If you want to manually compile SoH, please consult the [building instructions](docs/BUILDING.md).
+- **libultraship:** a patch in `scripts/haiku/patches/`, applied automatically when you configure on Haiku, so the
+  submodule stays on its upstream commit.
+- **Ship of Harkinian:** changes in this repository guarded by `__HAIKU__` or CMake `Haiku` checks, plus
+  `soh/soh/platform/haiku/` (file panel) and `soh/haiku/` (app resources).
 
-### Playtesting
-If you want to playtest a continuous integration build, you can find them at the links below. Keep in mind that these are for playtesting only, and you will likely encounter bugs and possibly crashes. 
+This fork follows upstream `develop`. Other platforms build exactly as upstream; for Windows, macOS and Linux, use
+[the official releases](https://github.com/HarbourMasters/Shipwright/releases).
 
-* [Windows](https://nightly.link/HarbourMasters/Shipwright/workflows/generate-builds/develop/soh-windows.zip)
-* [macOS](https://nightly.link/HarbourMasters/Shipwright/workflows/generate-builds/develop/soh-mac.zip)
-* [Linux X86_64](https://nightly.link/HarbourMasters/Shipwright/workflows/generate-builds/develop/soh-linux-x86_64.zip)
-* [Linux ARM](https://nightly.link/HarbourMasters/Shipwright/workflows/generate-builds/develop/soh-linux-aarch64.zip)
+## Credits
 
-### Further Reading
-More detailed documentation can be found in the 'docs' directory, including the aforementioned [building instructions](docs/BUILDING.md).
-
-* [Credits](docs/CREDITS.md)
-* [Custom Music](docs/CUSTOM_MUSIC.md)
-* [Formatting](docs/FORMATTING.md)
-* [Controller Mapping](docs/GAME_CONTROLLER_DB.md)
-* [Modding](docs/MODDING.md)
-* [Versioning](docs/VERSIONING.md)
+All credit for Ship of Harkinian goes to [HarbourMasters](https://github.com/HarbourMasters) and its contributors
+([docs/CREDITS.md](docs/CREDITS.md)), and to the OoT decompilation team. Haiku port by Techniix.
 
 <a href="https://github.com/Kenix3/libultraship/">
   <picture>
