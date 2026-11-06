@@ -7,7 +7,8 @@ cmd:git
 cmd:curl
 cmd:python3
 # Libraries
-mesa_devel
+# (No Mesa here on purpose: libGL comes from the system libglvnd package, and
+# installing stock mesa could clash with a custom driver stack such as NVK/Zink.)
 libsdl2_devel
 sdl2_net_devel
 libzip_devel
