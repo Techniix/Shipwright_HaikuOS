@@ -15,14 +15,14 @@ index 08cc791..bcc0720 100644
  endif()
 diff --git a/cmake/dependencies/haiku.cmake b/cmake/dependencies/haiku.cmake
 new file mode 100644
-index 0000000..37ffcaa
+index 0000000..3a5d2a5
 --- /dev/null
 +++ b/cmake/dependencies/haiku.cmake
 @@ -0,0 +1,35 @@
 +#=================== ImGui ===================
-+# Haiku ships Mesa without GLVND, so there is no libOpenGL.so: FindOpenGL only
-+# fills OPENGL_gl_LIBRARY (libGL.so). SDL2's Haiku backend gives us the GL
-+# context through BGLView.
++# Link libGL directly. It comes from Mesa (or libglvnd's dispatcher on newer
++# Haiku); either way it exports every GL entry point. SDL2's Haiku backend
++# creates the GL context through BGLView.
 +find_package(SDL2 REQUIRED)
 +target_link_libraries(ImGui PUBLIC SDL2::SDL2)
 +
@@ -42,7 +42,7 @@ index 0000000..37ffcaa
 +    if (NOT OPENGL_gl_LIBRARY)
 +        message(FATAL_ERROR
 +            "libGL not found. Install Mesa's development files:\n"
-+            "    pkgman install devel:libGL\n"
++            "    pkgman install mesa mesa_devel\n"
 +            "then check that /boot/system/develop/lib/libGL.so exists and re-run cmake.")
 +    endif()
 +    target_link_libraries(ImGui PUBLIC ${OPENGL_gl_LIBRARY})
