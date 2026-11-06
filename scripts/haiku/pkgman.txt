@@ -1,0 +1,23 @@
+# Build dependencies for Ship of Harkinian on Haiku (x86_64), as HaikuPorts package names.
+# Tools (installed by the command they provide)
+cmd:gcc
+cmd:cmake
+cmd:ninja
+cmd:git
+cmd:curl
+cmd:python3
+# Libraries
+mesa_devel
+libsdl2_devel
+sdl2_net_devel
+libzip_devel
+zlib_devel
+bzip2_devel
+nlohmann_json
+tinyxml2_devel
+spdlog_devel
+fmt_devel
+libogg_devel
+libvorbis_devel
+opus_devel
+opusfile_devel

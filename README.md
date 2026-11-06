@@ -1,3 +1,8 @@
+> [!NOTE]
+> **Shipwright_HaikuOS** is an unofficial fork that adds [Haiku](https://www.haiku-os.org/) support to Ship of Harkinian.
+> It is not affiliated with HarbourMasters or Nintendo. See [docs/HAIKU.md](docs/HAIKU.md) to build and run it on Haiku,
+> and [NOTICE.md](NOTICE.md) for licensing. Please report Haiku-specific problems here, not upstream.
+
 ![Ship of Harkinian](docs/shiptitle.darkmode.png#gh-dark-mode-only)
 ![Ship of Harkinian](docs/shiptitle.lightmode.png#gh-light-mode-only)
 

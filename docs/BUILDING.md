@@ -234,6 +234,15 @@ cmake --build build-cmake --target clean
 cmake --build build-cmake --target ExtractAssetHeaders
 ```
 
+## Haiku
+Haiku (x86_64) is supported. On a Haiku machine:
+```sh
+git clone https://github.com/Techniix/Shipwright_HaikuOS.git
+cd Shipwright_HaikuOS
+scripts/haiku/build.sh --deps
+```
+See [HAIKU.md](HAIKU.md) for details, where files are stored and graphics notes.
+
 ## macOS
 Requires Xcode (or xcode-tools) && `sdl2, sdl2_net, libpng, glew, ninja, cmake, tinyxml2, nlohmann-json, libzip, opusfile, libvorbis` (can be installed via [homebrew](https://brew.sh/), macports, etc)
 
