@@ -103,6 +103,23 @@ index ad9b1dd..8e05921 100644
      glewInit();
  #endif
  
+diff --git a/src/fast/backends/gfx_sdl2.cpp b/src/fast/backends/gfx_sdl2.cpp
+index 15c5415..f5ac5b2 100644
+--- a/src/fast/backends/gfx_sdl2.cpp
++++ b/src/fast/backends/gfx_sdl2.cpp
+@@ -30,6 +30,12 @@
+ #include <SDL.h>
+ #include "fast/backends/gfx_metal.h"
+ #include "ship/utils/macUtils.h"
++#elif defined(__HAIKU__)
++// SDL_opengles2.h pulls in the system GLES2 headers, which Haiku doesn't ship
++// unless Mesa's dev package is installed. SDL_opengl.h is self-contained.
++#include <SDL2/SDL.h>
++#define GL_GLEXT_PROTOTYPES 1
++#include <SDL2/SDL_opengl.h>
+ #else
+ #include <SDL2/SDL.h>
+ #define GL_GLEXT_PROTOTYPES 1
 diff --git a/src/ship/Context.cpp b/src/ship/Context.cpp
 index 28a211f..7973839 100644
 --- a/src/ship/Context.cpp
