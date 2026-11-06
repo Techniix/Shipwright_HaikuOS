@@ -7,7 +7,7 @@ cmd:git
 cmd:curl
 cmd:python3
 # Libraries
-mesa_devel
+devel:libGL
 libsdl2_devel
 sdl2_net_devel
 libzip_devel

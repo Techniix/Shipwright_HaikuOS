@@ -26,6 +26,19 @@ foreach(_patch IN LISTS _haiku_lus_patches)
         continue()
     endif()
 
+    # An older version of the patch may already be applied (the patch was
+    # updated in a pull). The submodule's tree is only ever changed by these
+    # patches, so reset it and apply the current version.
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} -C "${_lus_dir}" apply --check "${_patch}"
+        RESULT_VARIABLE _applies OUTPUT_QUIET ERROR_QUIET
+    )
+    if(NOT _applies EQUAL 0)
+        message(STATUS "Haiku: resetting libultraship to reapply the updated ${_patch_name}")
+        execute_process(COMMAND ${GIT_EXECUTABLE} -C "${_lus_dir}" checkout -- . OUTPUT_QUIET ERROR_QUIET)
+        execute_process(COMMAND ${GIT_EXECUTABLE} -C "${_lus_dir}" clean -fdq OUTPUT_QUIET ERROR_QUIET)
+    endif()
+
     execute_process(
         COMMAND ${GIT_EXECUTABLE} -C "${_lus_dir}" apply --whitespace=nowarn "${_patch}"
         RESULT_VARIABLE _applied ERROR_VARIABLE _apply_err
