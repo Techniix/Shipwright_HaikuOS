@@ -370,6 +370,9 @@ endif()
 ################################################################################
 # Sub-projects
 ################################################################################
+if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    include(CMake/HaikuPatches.cmake)
+endif()
 add_subdirectory(libultraship ${CMAKE_BINARY_DIR}/libultraship SYSTEM)
 quiet_target(libultraship "${WARNING_OVERRIDE}")
 target_compile_definitions(libultraship PUBLIC INCLUDE_MPQ_SUPPORT)
@@ -386,6 +389,17 @@ endif()
 
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/soh/assets/yml/" DESTINATION assets COMPONENT ship)
+endif()
+
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Haiku")
+install(FILES "${CMAKE_BINARY_DIR}/soh/soh.o2r" DESTINATION . COMPONENT ship)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/soh/assets/yml/" DESTINATION assets COMPONENT ship)
+install(FILES ${CMAKE_SOURCE_DIR}/README.md DESTINATION . COMPONENT ship RENAME readme.txt)
+install(FILES ${CMAKE_SOURCE_DIR}/docs/HAIKU.md DESTINATION . COMPONENT ship RENAME haiku-readme.txt)
+install(FILES ${CMAKE_SOURCE_DIR}/NOTICE.md DESTINATION . COMPONENT ship RENAME NOTICE.txt)
+install(FILES ${CMAKE_SOURCE_DIR}/libultraship/LICENSE DESTINATION licenses COMPONENT ship RENAME libultraship.txt)
+install(FILES ${CMAKE_SOURCE_DIR}/torch/LICENSE DESTINATION licenses COMPONENT ship RENAME torch.txt)
+install(FILES ${CMAKE_SOURCE_DIR}/soh/soh/Enhancements/randomizer/3drando/LICENSE.md DESTINATION licenses COMPONENT ship RENAME oot-randomizer.txt)
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -441,6 +455,8 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Windows|NintendoSwitch|CafeOS")
     set(CPACK_GENERATOR "ZIP")
 elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(CPACK_GENERATOR "Bundle")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    set(CPACK_GENERATOR "ZIP")
 endif()
 
 set(CPACK_PROJECT_CONFIG_FILE ${CMAKE_SOURCE_DIR}/CMake/Packaging-2.cmake)

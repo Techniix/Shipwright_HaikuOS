@@ -1,0 +1,210 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 08cc791..bcc0720 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -68,6 +68,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
+     include(cmake/dependencies/openbsd.cmake)
+ endif()
+ 
++if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
++    include(cmake/dependencies/haiku.cmake)
++endif()
++
+ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+     include(cmake/dependencies/windows.cmake)
+ endif()
+diff --git a/cmake/dependencies/haiku.cmake b/cmake/dependencies/haiku.cmake
+new file mode 100644
+index 0000000..73aa668
+--- /dev/null
++++ b/cmake/dependencies/haiku.cmake
+@@ -0,0 +1,24 @@
++#=================== ImGui ===================
++# Haiku ships Mesa without GLVND, so there is no libOpenGL.so: FindOpenGL only
++# fills OPENGL_gl_LIBRARY (libGL.so). SDL2's Haiku backend gives us the GL
++# context through BGLView.
++find_package(SDL2 REQUIRED)
++target_link_libraries(ImGui PUBLIC SDL2::SDL2)
++
++if (USE_OPENGLES)
++    find_library(OPENGLES_LIBRARY GLESv2)
++    target_link_libraries(ImGui PUBLIC ${OPENGLES_LIBRARY})
++    add_compile_definitions(IMGUI_IMPL_OPENGL_ES3)
++else()
++    if (NOT OPENGL_gl_LIBRARY)
++        find_library(OPENGL_gl_LIBRARY GL REQUIRED)
++    endif()
++    target_link_libraries(ImGui PUBLIC ${OPENGL_gl_LIBRARY})
++
++    # ImGui's own GL loader needs EGL or GLX to find functions, and Haiku has
++    # neither. Use the prototypes libGL exports instead.
++    set_source_files_properties(${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp PROPERTIES
++        COMPILE_DEFINITIONS IMGUI_IMPL_OPENGL_LOADER_CUSTOM
++        COMPILE_OPTIONS "-include;${CMAKE_CURRENT_LIST_DIR}/haiku/imgui_gl_loader.h"
++    )
++endif()
+diff --git a/cmake/dependencies/haiku/imgui_gl_loader.h b/cmake/dependencies/haiku/imgui_gl_loader.h
+new file mode 100644
+index 0000000..ffbd55e
+--- /dev/null
++++ b/cmake/dependencies/haiku/imgui_gl_loader.h
+@@ -0,0 +1,9 @@
++// Force-included into imgui_impl_opengl3.cpp on Haiku.
++//
++// ImGui's bundled loader (imgl3w) resolves GL entry points through
++// eglGetProcAddress or glXGetProcAddressARB. Haiku's Mesa has neither, so the
++// loader fails and the menus never draw. libGL.so on Haiku exports every GL
++// entry point directly, so declare the prototypes and link libGL instead.
++#pragma once
++#define GL_GLEXT_PROTOTYPES 1
++#include <SDL2/SDL_opengl.h>
+diff --git a/src/fast/Fast3dGui.cpp b/src/fast/Fast3dGui.cpp
+index 237a502..02d9077 100644
+--- a/src/fast/Fast3dGui.cpp
++++ b/src/fast/Fast3dGui.cpp
+@@ -62,6 +62,16 @@ bool Fast3dGui::SupportsViewports() {
+     return false;
+ #endif
+ 
++#ifdef __HAIKU__
++    // SDL2's Haiku backend gives every window its own BGLView context and
++    // ImGui's extra platform windows don't render reliably through it. Keep
++    // menus inside the game window unless explicitly asked for.
++    const char* haikuViewports = std::getenv("SHIP_HAIKU_VIEWPORTS");
++    if (haikuViewports == nullptr || std::string(haikuViewports) != "1") {
++        return false;
++    }
++#endif
++
+     return true;
+ }
+ 
+diff --git a/src/fast/backends/gfx_opengl.cpp b/src/fast/backends/gfx_opengl.cpp
+index ad9b1dd..8e05921 100644
+--- a/src/fast/backends/gfx_opengl.cpp
++++ b/src/fast/backends/gfx_opengl.cpp
+@@ -708,7 +708,7 @@ void GfxRenderingAPIOGL::DrawTriangles(float buf_vbo[], size_t buf_vbo_len, size
+ }
+ 
+ void GfxRenderingAPIOGL::Init() {
+-#if !defined(__linux__) && !defined(__OpenBSD__)
++#if !defined(__linux__) && !defined(__OpenBSD__) && !defined(__HAIKU__)
+     glewInit();
+ #endif
+ 
+diff --git a/src/ship/Context.cpp b/src/ship/Context.cpp
+index 28a211f..7973839 100644
+--- a/src/ship/Context.cpp
++++ b/src/ship/Context.cpp
+@@ -29,6 +29,11 @@
+ #include <pwd.h>
+ #endif
+ 
++#ifdef __HAIKU__
++#include <image.h>
++#include <unistd.h>
++#endif
++
+ namespace Ship {
+ std::unique_ptr<Context> Context::mContext;
+ 
+@@ -517,6 +522,25 @@ std::string Context::GetAppBundlePath() {
+     }
+ #endif
+ 
++#ifdef __HAIKU__
++    // Haiku has no /proc; the app image's path comes from the loader.
++    image_info info;
++    int32 cookie = 0;
++    while (get_next_image_info(B_CURRENT_TEAM, &cookie, &info) == B_OK) {
++        if (info.type != B_APP_IMAGE) {
++            continue;
++        }
++
++        std::string progpath(info.name);
++        size_t lastSlash = progpath.find_last_of('/');
++        if (lastSlash != std::string::npos) {
++            progpath.erase(lastSlash);
++            return progpath;
++        }
++        break;
++    }
++#endif
++
+ #ifdef _WIN32
+     std::wstring progpath(MAX_PATH, '\0');
+ 
+@@ -578,6 +602,38 @@ std::string Context::GetAppDirectoryPath(const std::string& appName) {
+     }
+ #endif
+ 
++#if defined(__HAIKU__) && !defined(NON_PORTABLE)
++    if (const char* fpath = std::getenv("SHIP_HOME")) {
++        return std::string(fpath);
++    }
++
++    // Portable layout like the Windows and Linux zips: data lives next to the
++    // executable. Use its real path rather than "." because apps started from
++    // Tracker or Deskbar don't necessarily run with their own folder as the cwd.
++    // If the app sits in a read-only place (an hpkg in /boot/system/apps),
++    // fall back to ~/config/settings/<app>.
++    std::string exeDir = GetAppBundlePath();
++    if (access(exeDir.c_str(), W_OK) == 0) {
++        return exeDir;
++    }
++
++    std::string haikuAppName = appName;
++    if (haikuAppName.empty() && GetRawInstance() != nullptr) {
++        haikuAppName = GetRawInstance()->mShortName;
++    }
++    if (!haikuAppName.empty()) {
++        char* prefpath = SDL_GetPrefPath(NULL, haikuAppName.c_str());
++        if (prefpath != NULL) {
++            std::string ret(prefpath);
++            SDL_free(prefpath);
++            while (ret.size() > 1 && ret.back() == '/') {
++                ret.pop_back();
++            }
++            return ret;
++        }
++    }
++#endif
++
+ #ifdef NON_PORTABLE
+     const std::string& effectiveAppName = appName.empty() ? GetRawInstance()->mShortName : appName;
+     char* prefpath = SDL_GetPrefPath(NULL, effectiveAppName.c_str());
+diff --git a/src/ship/window/FileDropMgr.cpp b/src/ship/window/FileDropMgr.cpp
+index f36eb82..cfd7d34 100644
+--- a/src/ship/window/FileDropMgr.cpp
++++ b/src/ship/window/FileDropMgr.cpp
+@@ -11,7 +11,7 @@
+ #endif
+ #include "ship/Context.h"
+ #include "ship/window/Window.h"
+-#ifdef __unix__
++#if defined(__unix__) || defined(__HAIKU__)
+ #include <dlfcn.h>
+ #include <cxxabi.h>
+ #endif
+@@ -50,7 +50,7 @@ char* FileDropMgr::GetDroppedFile() const {
+ }
+ 
+ static void PrintRegError(void* funcAddr) {
+-#ifdef __unix__
++#if defined(__unix__) || defined(__HAIKU__)
+     Dl_info info;
+     int gotAddress = dladdr(funcAddr, &info);
+     const char* nameFound = info.dli_sname;
+diff --git a/src/ship/window/gui/StatsWindow.cpp b/src/ship/window/gui/StatsWindow.cpp
+index 00cc7f0..5043675 100644
+--- a/src/ship/window/gui/StatsWindow.cpp
++++ b/src/ship/window/gui/StatsWindow.cpp
+@@ -25,6 +25,8 @@ void StatsWindow::DrawElement() {
+     ImGui::Text("Platform: Linux");
+ #elif defined(__OpenBSD__)
+     ImGui::Text("Platform: OpenBSD");
++#elif defined(__HAIKU__)
++    ImGui::Text("Platform: Haiku");
+ #else
+     ImGui::Text("Platform: Unknown");
+ #endif
